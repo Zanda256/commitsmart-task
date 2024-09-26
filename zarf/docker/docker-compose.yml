@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   user-api:
-    image: mongo:latest
+    image: zanda256/commitsmart/user-api:0.0.1
     container_name: commitsmart-user-api
     restart: always
     environment:
