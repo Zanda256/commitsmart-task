@@ -1,0 +1,35 @@
+# Build the Go Binary.
+FROM golang:1.23 as build_user-api
+
+ENV CGO_ENABLED 0
+ARG BUILD_REF
+
+# Copy the source code into the container.
+COPY . /service
+
+# Build the service binary.
+WORKDIR /service/app/services/user-api
+
+# pass in the version or git commit being built to the variable build in main.go
+RUN go build -ldflags "-X main.build=${BUILD_REF}"
+
+# Run the Go Binary in Alpine.
+# alpine:3.18 is a bit heavy, but it will let us ssh into the container and debug stuff
+FROM alpine:3.18
+ARG BUILD_DATE
+ARG BUILD_REF
+# create a user and a group so that your binary does not run as root
+RUN addgroup -g 1000 -S user && \
+    adduser -u 1000 -h /service -G user -S user
+
+COPY --from=build_user-api --chown=user:user /service/app/services/user-api/user-api /service/user-api
+WORKDIR /service
+USER user
+CMD ["./users-api"]
+
+LABEL org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.title="users-api" \
+      org.opencontainers.image.authors="Sekiranda Hamza <sekirandahamza@gmail.com>" \
+      org.opencontainers.image.source="https://github.com/Zanda256/ardan-service/tree/master/app/services/users-api" \
+      org.opencontainers.image.revision="${BUILD_REF}" \
+      org.opencontainers.image.vendor="Sekiranda Hamza"
