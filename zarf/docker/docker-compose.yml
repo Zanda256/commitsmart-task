@@ -3,16 +3,16 @@ version: "3.8"
 services:
   user-api:
     image: mongo:latest
-    container_name: commitsmart-mongodb
+    container_name: commitsmart-user-api
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: user
-      MONGO_INITDB_ROOT_PASSWORD: pass
+      MONGO_DB_USERNAME: user
+      MONGO_DB_PASSWORD: pass
+      MONGO_DB_USER_COLLECTION_NAME: users
+      MONGO_DB_URL: mongodb
+      MONGO_DB_DATABASE_NAME: user-db
     ports:
       - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-
 
   mongodb:
     image: mongo:latest

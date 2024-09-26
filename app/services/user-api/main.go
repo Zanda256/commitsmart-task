@@ -76,11 +76,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	cfg.Web.APIHost = getConfStrVal("API_HOST", "0.0.0.0:3000")
 
-	cfg.MongoDb.Url = getConfStrVal("", "localhost:27017")
-	cfg.MongoDb.UsersCollectionName = getConfStrVal("", "")
-	cfg.MongoDb.UsersAPIDatabaseName = getConfStrVal("", "")
-	cfg.MongoDb.UsersMongoUser = getConfStrVal("", "user")
-	cfg.MongoDb.UsersMongoPassword = getConfStrVal("", "pass")
+	cfg.MongoDb.Url = getConfStrVal("MONGO_DB_URL", "localhost:27017")
+	cfg.MongoDb.UsersCollectionName = getConfStrVal("MONGO_DB_USER_COLLECTION_NAME", "users")
+	cfg.MongoDb.UsersAPIDatabaseName = getConfStrVal("MONGO_DB_DATABASE_NAME", "user-db")
+	cfg.MongoDb.UsersMongoUser = getConfStrVal("MONGO_DB_USERNAME", "user")
+	cfg.MongoDb.UsersMongoPassword = getConfStrVal("MONGO_DB_PASSWORD", "pass")
 
 	// -------------------------------------------------------------------------
 	// Start up db
