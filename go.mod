@@ -1,6 +1,6 @@
 module github.com/Zanda256/commitsmart-task
 
-go 1.22.2
+go 1.22
 
 require github.com/google/uuid v1.6.0
 

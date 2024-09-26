@@ -20,6 +20,9 @@ type Handlers struct {
 //	}
 //}
 
+//  cd ./app/services/ratesApi && \
+//    go build -ldflags "-X main.build=$(BUILD_REF)
+
 func New() *Handlers {
 	return &Handlers{}
 }

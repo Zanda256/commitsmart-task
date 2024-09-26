@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"expvar"
 	"fmt"
 	"github.com/Zanda256/commitsmart-task/app/services/user-api/v1/handlers"
+	documentStore "github.com/Zanda256/commitsmart-task/business/data/docStore"
 	v1 "github.com/Zanda256/commitsmart-task/business/web/v1"
 	"github.com/Zanda256/commitsmart-task/foundation/logger"
 	"github.com/Zanda256/commitsmart-task/foundation/web"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +20,10 @@ import (
 const (
 	mongoScheme = "mongodb+srv://"
 	//mongoScheme = "mongodb://"
+)
+
+var (
+	build = "develop"
 )
 
 func main() {
@@ -45,6 +52,8 @@ func main() {
 }
 
 func run(ctx context.Context, log *logger.Logger) error {
+	expvar.NewString("build").Set(build)
+
 	cfg := struct {
 		Web struct {
 			ReadTimeout     time.Duration
@@ -70,8 +79,34 @@ func run(ctx context.Context, log *logger.Logger) error {
 	cfg.MongoDb.Url = getConfStrVal("", "localhost:27017")
 	cfg.MongoDb.UsersCollectionName = getConfStrVal("", "")
 	cfg.MongoDb.UsersAPIDatabaseName = getConfStrVal("", "")
-	cfg.MongoDb.UsersMongoUser = getConfStrVal("", "")
-	cfg.MongoDb.UsersMongoPassword = getConfStrVal("", "")
+	cfg.MongoDb.UsersMongoUser = getConfStrVal("", "user")
+	cfg.MongoDb.UsersMongoPassword = getConfStrVal("", "pass")
+
+	// -------------------------------------------------------------------------
+	// Start up db
+
+	bsonOpts := &options.BSONOptions{
+		UseJSONStructTags: true,
+		NilSliceAsEmpty:   true,
+	}
+
+	mongoUrl := mongoScheme + cfg.MongoDb.UsersMongoUser + ":" + cfg.MongoDb.UsersMongoPassword + "@" + cfg.MongoDb.Url
+
+	clientOpts := options.Client().
+		ApplyURI(mongoUrl).
+		SetBSONOptions(bsonOpts).
+		SetTimeout(5 * time.Second)
+	client, err := documentStore.StartDB(clientOpts)
+	if err != nil {
+		return fmt.Errorf("mongodb connection failed: %q", err.Error())
+	}
+	db := client.Database(cfg.MongoDb.UsersAPIDatabaseName)
+	err = documentStore.StatusCheck(ctx, db)
+	if err != nil {
+		return fmt.Errorf("failed to ping mongodb: %q", err.Error())
+	}
+
+	// -------------------------------------------------------------------------
 
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
@@ -91,6 +126,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 		IdleTimeout:  cfg.Web.IdleTimeout,
 		ErrorLog:     logger.NewStdLogger(log, logger.LevelError),
 	}
+
+	log.Info(ctx, "starting service", "version", build)
 
 	serverErrors := make(chan error, 1)
 
