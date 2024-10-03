@@ -1,23 +1,28 @@
-version: "3.8"
+#version: "3.8"
 
 services:
   user-api:
-    image: zanda256/commitsmart/user-api:0.0.1
+    image: zanda256/user-api:0.0.1
     container_name: commitsmart-user-api
-    restart: always
+    #  restart: always
     environment:
+      MONGO_DB_URL: mongodb:27017
+      MONGO_DB_DATABASE_NAME: user-db
+      MONGO_DB_USER_COLLECTION_NAME: users
       MONGO_DB_USERNAME: user
       MONGO_DB_PASSWORD: pass
-      MONGO_DB_USER_COLLECTION_NAME: users
-      MONGO_DB_URL: mongodb
-      MONGO_DB_DATABASE_NAME: user-db
+      USER_CMKey_PATH: none-yet
+      USER_DEK_ALIAS: 0310DataEncryptionKey
     ports:
-      - "27017:27017"
+      - "3000:3000"
+
+    depends_on:
+      - mongodb
 
   mongodb:
     image: mongo:latest
     container_name: commitsmart-mongodb
-    restart: always
+    #  restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: user
       MONGO_INITDB_ROOT_PASSWORD: pass

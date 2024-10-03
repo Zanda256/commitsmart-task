@@ -5,10 +5,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Zanda256/commitsmart-task/foundation/keystore"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type DocStorage struct {
+	Client     *mongo.Client
+	EncryptMgr *mongo.ClientEncryption
+}
 
 func StartDB(opts *options.ClientOptions) (*mongo.Client, error) {
 
@@ -57,3 +63,80 @@ func OpenCollection(db *mongo.Database, collectionName string) *mongo.Collection
 	var collection = db.Collection(collectionName)
 	return collection
 }
+
+func StartEncryptedDB(opts *options.ClientOptions) (*DocStorage, error) {
+
+	// Create Customer Master Key
+	localMasterKey, err := keystore.MustGetMKey()
+	if err != nil {
+		return nil, err
+	}
+	kmsProviders := map[string]map[string]interface{}{
+		"local": {
+			"key": localMasterKey,
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Create a new client and connect to the server
+	client, err := mongo.Connect(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a ClientEncryption Instance
+	clientEncryptionOpts := options.ClientEncryption().SetKeyVaultNamespace("encryption.__keyVault").SetKmsProviders(kmsProviders)
+	clientEnc, err := mongo.NewClientEncryption(client, clientEncryptionOpts)
+	if err != nil {
+		return nil, fmt.Errorf("NewClientEncryption error %v", err)
+	}
+
+	// Add this to shutdown signal actions
+	// defer func() {
+	// 	_ = clientEnc.Close(context.TODO())
+	// }()
+
+	// -------------------------------------------------------------------------------------------------
+	// Define index on "keyAltNames" field of the "__keyVault" collection
+	// Define the index model
+	indexModel := mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "keyAltNames", Value: 1},
+		},
+		Options: options.Index().SetName(fmt.Sprintf("encryption.%s.keyAltNames_index", "__keyVault")).
+			SetUnique(true).
+			SetPartialFilterExpression(bson.D{
+				{Key: "keyAltNames", Value: bson.D{
+					{Key: "$exists", Value: true},
+				}},
+			}),
+	}
+
+	// Create the index
+	keyVaultColl := client.Database("encryption").Collection("__keyVault")
+	_, err = keyVaultColl.Indexes().CreateOne(context.Background(), indexModel)
+	if err != nil {
+		fmt.Println("Error creating index:", err)
+		return nil, err
+	}
+
+	fmt.Println("Connected to MongoDB Successfully!")
+	strg := &DocStorage{
+		Client:     client,
+		EncryptMgr: clientEnc,
+	}
+
+	return strg, nil
+}
+
+// func localMasterKey() []byte {
+// 	key := make([]byte, 96)
+// 	if _, err := rand.Read(key); err != nil {
+// 		logger.Fatalf("Unable to create a random 96 byte data key: %v", err)
+// 	}
+// 	if err := ioutil.WriteFile("master-key.txt", key, 0644); err != nil {
+// 		log.Fatalf("Unable to write key to file: %v", err)
+// 	}
+// 	return key
+// }

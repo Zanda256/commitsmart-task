@@ -22,3 +22,6 @@ To run the RESTful API use the following command
 
 Test the dummy endpoint using `curl`
 `curl -il -X POST http://localhost:3000/v1/users`
+
+To run the API as docker compose project, use the following command
+`make service-compose`

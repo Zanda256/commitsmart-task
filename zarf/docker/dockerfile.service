@@ -1,35 +1,67 @@
-# Build the Go Binary.
-FROM golang:1.23 as build_user-api
+FROM --platform=linux/amd64 ubuntu:focal AS build_user-api
 
-ENV CGO_ENABLED 0
 ARG BUILD_REF
+
+ARG GO_VERSION
+ENV GO_VERSION=${GO_VERSION}
+
+# Install app building dependencies
+RUN apt-get update && apt-get install -y wget git gcc build-essential libc6-dev
+RUN DEBIAN_FRONTEND=noninteractive  apt-get install -y pkg-config libssl1.1
+
+RUN wget -P /tmp "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz"
+
+RUN tar -C /usr/local -xzf "/tmp/go${GO_VERSION}.linux-amd64.tar.gz"
+RUN rm "/tmp/go${GO_VERSION}.linux-amd64.tar.gz"
+
+RUN echo "export PATH=$PATH:/usr/local/go/bin" >> /etc/profile && . /etc/profile
+
+ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+
+RUN go version
+
+# Configure libmongocrypt repository
+RUN wget -qO- https://pgp.mongodb.com/libmongocrypt.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/libmongocrypt.gpg && echo "deb https://libmongocrypt.s3.amazonaws.com/apt/ubuntu focal/libmongocrypt/1.11 universe" | tee /etc/apt/sources.list.d/libmongocrypt.list
+# Install libmongocrypt
+RUN apt-get update && apt-get install -y libmongocrypt-dev
 
 # Copy the source code into the container.
-COPY . /service
+COPY . /user-api-service
 
-# Build the service binary.
-WORKDIR /service/app/services/user-api
+# Build the user-api-service binary.
+WORKDIR /user-api-service/app/services/user-api
 
 # pass in the version or git commit being built to the variable build in main.go
-RUN go build -ldflags "-X main.build=${BUILD_REF}"
+# "CGO_ENABLED=1" env var because we need to bind to C libraries that enable mongodb CSFLE
+# "-tags cse" build flag in go build command to enable mongodb CSFLE
+RUN env CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags cse -ldflags "-X main.build=${BUILD_REF}" -o users-api
 
-# Run the Go Binary in Alpine.
-# alpine:3.18 is a bit heavy, but it will let us ssh into the container and debug stuff
-FROM alpine:3.18
+
+# Run the Go Binary in Ubuntu /amd64.
+# ubuntu:focal is a bit heavy, but it will let us use cryptographic packages required for our users-api
+FROM ubuntu:focal
+#ARG TARGETARCH -requires buildkit
 ARG BUILD_DATE
 ARG BUILD_REF
-# create a user and a group so that your binary does not run as root
-RUN addgroup -g 1000 -S user && \
-    adduser -u 1000 -h /service -G user -S user
 
-COPY --from=build_user-api --chown=user:user /service/app/services/user-api/user-api /service/user-api
-WORKDIR /service
-USER user
+# create a user and a group so that your binary does not run as root
+RUN groupadd -g 1000 -r user-api && \
+    useradd -u 1000 -r -g user-api -d /user-api-service -s /bin/false user-api-user
+
+# copy shared object file to final image to be used by mongo driver
+COPY --from=build_user-api /lib/x86_64-linux-gnu/libmongocrypt* /lib/x86_64-linux-gnu/
+COPY --from=build_user-api /lib/x86_64-linux-gnu/libcrypto* /lib/x86_64-linux-gnu/
+
+#copy our application binary
+COPY --from=build_user-api --chown=user-api:user-api-user /user-api-service/app/services/user-api/users-api /user-api-service/users-api
+
+WORKDIR /user-api-service
+USER user-api-user
 CMD ["./users-api"]
 
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.title="users-api" \
       org.opencontainers.image.authors="Sekiranda Hamza <sekirandahamza@gmail.com>" \
-      org.opencontainers.image.source="https://github.com/Zanda256/ardan-service/tree/master/app/services/users-api" \
+      org.opencontainers.image.source="https://github.com/Zanda256/commitsmart-task/tree/master/app/services/users-api" \
       org.opencontainers.image.revision="${BUILD_REF}" \
       org.opencontainers.image.vendor="Sekiranda Hamza"

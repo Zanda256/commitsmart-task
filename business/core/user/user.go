@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+
 	"github.com/Zanda256/commitsmart-task/foundation/logger"
 )
 
@@ -25,4 +26,8 @@ func NewCore(log *logger.Logger, storer Storer) *Core {
 		storer: storer,
 		log:    log,
 	}
+}
+
+func (uc *Core) Create(ctx context.Context, nu NewUser) (User, error) {
+	return User{}, nil
 }

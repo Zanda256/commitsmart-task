@@ -1,17 +1,23 @@
 package v1
 
 import (
+	"os"
+
+	documentStore "github.com/Zanda256/commitsmart-task/business/data/docStore"
 	"github.com/Zanda256/commitsmart-task/business/web/v1/mid"
 	"github.com/Zanda256/commitsmart-task/foundation/logger"
 	"github.com/Zanda256/commitsmart-task/foundation/web"
-	"os"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // APIMuxConfig contains all the mandatory systems required by handlers.
 type APIMuxConfig struct {
-	Build    string
-	Shutdown chan os.Signal
-	Log      *logger.Logger
+	Build              string
+	Shutdown           chan os.Signal
+	Log                *logger.Logger
+	DbClients          *documentStore.DocStorage
+	UserDb             *mongo.Database
+	UserCollectionName string
 }
 
 // RouteAdder defines behavior that sets the routes to bind for an instance

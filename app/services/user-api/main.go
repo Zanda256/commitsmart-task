@@ -4,22 +4,24 @@ import (
 	"context"
 	"expvar"
 	"fmt"
-	"github.com/Zanda256/commitsmart-task/app/services/user-api/v1/handlers"
-	documentStore "github.com/Zanda256/commitsmart-task/business/data/docStore"
-	v1 "github.com/Zanda256/commitsmart-task/business/web/v1"
-	"github.com/Zanda256/commitsmart-task/foundation/logger"
-	"github.com/Zanda256/commitsmart-task/foundation/web"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/Zanda256/commitsmart-task/app/services/user-api/v1/handlers"
+	documentStore "github.com/Zanda256/commitsmart-task/business/data/docStore"
+	v1 "github.com/Zanda256/commitsmart-task/business/web/v1"
+	"github.com/Zanda256/commitsmart-task/foundation/keystore"
+	"github.com/Zanda256/commitsmart-task/foundation/logger"
+	"github.com/Zanda256/commitsmart-task/foundation/web"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
-	mongoScheme = "mongodb+srv://"
-	//mongoScheme = "mongodb://"
+	//mongoScheme = "mongodb+srv://"
+	mongoScheme = "mongodb://"
 )
 
 var (
@@ -39,7 +41,7 @@ func main() {
 		return web.GetTraceID(ctx)
 	}
 
-	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "SALES-API", traceIDFunc, events)
+	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "USER-API", traceIDFunc, events)
 
 	// -------------------------------------------------------------------------
 
@@ -71,6 +73,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 			UsersAPIDatabaseName string
 			UsersMongoUser       string
 			UsersMongoPassword   string
+			UsersDEKAltName      string
+			CMKeyPath            string
 		}
 	}{}
 
@@ -81,9 +85,16 @@ func run(ctx context.Context, log *logger.Logger) error {
 	cfg.MongoDb.UsersAPIDatabaseName = getConfStrVal("MONGO_DB_DATABASE_NAME", "user-db")
 	cfg.MongoDb.UsersMongoUser = getConfStrVal("MONGO_DB_USERNAME", "user")
 	cfg.MongoDb.UsersMongoPassword = getConfStrVal("MONGO_DB_PASSWORD", "pass")
+	cfg.MongoDb.UsersDEKAltName = getConfStrVal("USER_DEK_ALIAS", "user-dek-key-1")
+	cfg.MongoDb.CMKeyPath = getConfStrVal("USER_CMKey_PATH", "user-cmk-key-1")
+
+	// -------------------------------------------------------------------------
+	fmt.Printf("cfg.MongoDb.CMKeyPath : %s", cfg.MongoDb.CMKeyPath)
+	fmt.Printf("cfg.MongoDb.CMKeyPath : %s", cfg.MongoDb.CMKeyPath)
 
 	// -------------------------------------------------------------------------
 	// Start up db
+	keystore.UserDEKeyAlias = cfg.MongoDb.UsersDEKAltName
 
 	bsonOpts := &options.BSONOptions{
 		UseJSONStructTags: true,
@@ -96,11 +107,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 		ApplyURI(mongoUrl).
 		SetBSONOptions(bsonOpts).
 		SetTimeout(5 * time.Second)
-	client, err := documentStore.StartDB(clientOpts)
+	store, err := documentStore.StartEncryptedDB(clientOpts)
 	if err != nil {
 		return fmt.Errorf("mongodb connection failed: %q", err.Error())
 	}
-	db := client.Database(cfg.MongoDb.UsersAPIDatabaseName)
+	db := store.Client.Database(cfg.MongoDb.UsersAPIDatabaseName)
 	err = documentStore.StatusCheck(ctx, db)
 	if err != nil {
 		return fmt.Errorf("failed to ping mongodb: %q", err.Error())
@@ -112,8 +123,12 @@ func run(ctx context.Context, log *logger.Logger) error {
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
 	cfgMux := v1.APIMuxConfig{
-		Shutdown: shutdown,
-		Log:      log,
+		Build:              build,
+		Shutdown:           shutdown,
+		Log:                log,
+		DbClients:          store,
+		UserDb:             db,
+		UserCollectionName: cfg.MongoDb.UsersCollectionName,
 	}
 
 	apiMux := v1.APIMux(cfgMux, handlers.Routes{})
