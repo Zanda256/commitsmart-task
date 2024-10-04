@@ -127,7 +127,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 		Shutdown:           shutdown,
 		Log:                log,
 		DbClients:          store,
-		UserDb:             db,
+		UserDbName:         db.Name(),
 		UserCollectionName: cfg.MongoDb.UsersCollectionName,
 	}
 
@@ -164,6 +164,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 		ctx, cancel := context.WithTimeout(ctx, cfg.Web.ShutdownTimeout)
 		defer cancel()
+
+		_ = store.EncryptMgr.Close(ctx)
 
 		if err := api.Shutdown(ctx); err != nil {
 			api.Close()

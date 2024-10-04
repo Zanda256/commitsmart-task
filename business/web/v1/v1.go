@@ -7,7 +7,6 @@ import (
 	"github.com/Zanda256/commitsmart-task/business/web/v1/mid"
 	"github.com/Zanda256/commitsmart-task/foundation/logger"
 	"github.com/Zanda256/commitsmart-task/foundation/web"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // APIMuxConfig contains all the mandatory systems required by handlers.
@@ -16,7 +15,7 @@ type APIMuxConfig struct {
 	Shutdown           chan os.Signal
 	Log                *logger.Logger
 	DbClients          *documentStore.DocStorage
-	UserDb             *mongo.Database
+	UserDbName         string
 	UserCollectionName string
 }
 
@@ -28,7 +27,7 @@ type RouteAdder interface {
 
 // APIMux constructs a http.Handler with all application routes defined.
 func APIMux(cfg APIMuxConfig, routeAdder RouteAdder) *web.App {
-	app := web.NewApp(cfg.Shutdown, mid.Logger(cfg.Log), mid.Panics())
+	app := web.NewApp(cfg.Shutdown, mid.Logger(cfg.Log), mid.Errors(cfg.Log), mid.Panics())
 
 	routeAdder.Add(app, cfg)
 

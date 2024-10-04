@@ -76,26 +76,30 @@ func StartEncryptedDB(opts *options.ClientOptions) (*DocStorage, error) {
 			"key": localMasterKey,
 		},
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	autoEncryptionOpts := options.AutoEncryption().
+		SetKmsProviders(kmsProviders).
+		SetKeyVaultNamespace(keyVaultNamespace).
+		SetBypassAutoEncryption(true)
 	// Create a new client and connect to the server
-	client, err := mongo.Connect(ctx, opts)
+	client, err := mongo.Connect(ctx, opts.SetAutoEncryptionOptions(autoEncryptionOpts))
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Create a ClientEncryption Instance
-	clientEncryptionOpts := options.ClientEncryption().SetKeyVaultNamespace("encryption.__keyVault").SetKmsProviders(kmsProviders)
-	clientEnc, err := mongo.NewClientEncryption(client, clientEncryptionOpts)
+	csfleImpl, err := NewCSFLEObj(client, kmsProviders)
 	if err != nil {
-		return nil, fmt.Errorf("NewClientEncryption error %v", err)
+		return nil, err
 	}
 
-	// Add this to shutdown signal actions
-	// defer func() {
-	// 	_ = clientEnc.Close(context.TODO())
-	// }()
+	_, err = CreateDEK(ctx, csfleImpl)
+	if err != nil {
+		return nil, err
+	}
 
 	// -------------------------------------------------------------------------------------------------
 	// Define index on "keyAltNames" field of the "__keyVault" collection
@@ -104,10 +108,10 @@ func StartEncryptedDB(opts *options.ClientOptions) (*DocStorage, error) {
 		Keys: bson.D{
 			{Key: "keyAltNames", Value: 1},
 		},
-		Options: options.Index().SetName(fmt.Sprintf("encryption.%s.keyAltNames_index", "__keyVault")).
+		Options: options.Index().SetName(fmt.Sprintf("%s.%s_index", keyVaultNamespace, keyAltNames)).
 			SetUnique(true).
 			SetPartialFilterExpression(bson.D{
-				{Key: "keyAltNames", Value: bson.D{
+				{Key: keyAltNames, Value: bson.D{
 					{Key: "$exists", Value: true},
 				}},
 			}),
@@ -124,7 +128,7 @@ func StartEncryptedDB(opts *options.ClientOptions) (*DocStorage, error) {
 	fmt.Println("Connected to MongoDB Successfully!")
 	strg := &DocStorage{
 		Client:     client,
-		EncryptMgr: clientEnc,
+		EncryptMgr: csfleImpl,
 	}
 
 	return strg, nil

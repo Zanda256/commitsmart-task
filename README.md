@@ -17,11 +17,12 @@ Navigate into created folder
 Download dependent modules
 `go get .` followed by `go mod tidy`
 
-To run the RESTful API use the following command
+To run the RESTful API on your local machine , use the following command. (WARNING: This setup is not compatible with apple silicon processor machines)
 `make run`
-
-Test the dummy endpoint using `curl`
-`curl -il -X POST http://localhost:3000/v1/users`
 
 To run the API as docker compose project, use the following command
 `make service-compose`
+
+Test the dummy endpoint using `curl`
+`curl -il -X POST -H 'Content-Type: application/json' -d '{"name":"bill","email":"b@gmail.com","department":"IT","credit_card":"72635 37734 90273"}' http://localhost:3000/v1/users`
+

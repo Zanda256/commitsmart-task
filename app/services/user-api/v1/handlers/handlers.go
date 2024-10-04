@@ -14,7 +14,7 @@ func (Routes) Add(app *web.App, cfg v1.APIMuxConfig) {
 		Build:        cfg.Build,
 		Store:        cfg.DbClients,
 		Log:          cfg.Log,
-		UserDb:       cfg.UserDb,
+		UserDbName:   cfg.UserDbName,
 		UserCollName: cfg.UserCollectionName,
 	})
 }

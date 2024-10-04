@@ -2,6 +2,9 @@ package user
 
 import (
 	"context"
+	"fmt"
+	"github.com/google/uuid"
+	"time"
 
 	"github.com/Zanda256/commitsmart-task/foundation/logger"
 )
@@ -29,5 +32,22 @@ func NewCore(log *logger.Logger, storer Storer) *Core {
 }
 
 func (uc *Core) Create(ctx context.Context, nu NewUser) (User, error) {
-	return User{}, nil
+
+	now := time.Now()
+
+	usr := User{
+		ID:          uuid.New(),
+		Name:        nu.Name,
+		Email:       nu.Email,
+		Department:  nu.Department,
+		CreditCard:  nu.CreditCard,
+		DateCreated: now,
+		DateUpdated: now,
+	}
+	if err := uc.storer.Create(ctx, usr); err != nil {
+		uc.log.Error(ctx, "error creating user", "message", err)
+		return User{}, fmt.Errorf("create: %w", err)
+	}
+
+	return usr, nil
 }
