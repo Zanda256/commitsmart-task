@@ -3,7 +3,6 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
 )
 
@@ -12,9 +11,9 @@ type validator interface {
 }
 
 // Param returns the web call parameters from the request.
-func Param(r *http.Request, key string) string {
-	p := httprouter.ParamsFromContext(r.Context())
-	return p.ByName(key)
+func Param(r *http.Request, key string) (par string) {
+
+	return
 }
 
 // Decode reads the body of an HTTP request looking for a JSON document. The

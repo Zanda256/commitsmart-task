@@ -7,6 +7,8 @@ import (
 
 	"github.com/Zanda256/commitsmart-task/foundation/keystore"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/Zanda256/commitsmart-task/business/core/user"
 	documentStore "github.com/Zanda256/commitsmart-task/business/data/docStore"
@@ -61,10 +63,10 @@ func (s *Store) Create(ctx context.Context, usr user.User) error {
 // Create inserts a new user into the database.
 func (s *Store) saveUser(ctx context.Context, usr user.User) (user.User, error) {
 	email, err := s.dbClient.EncryptStrVal(ctx, usr.Email.String(), keystore.UserDEKeyAlias)
-
 	if err != nil {
 		return user.User{}, fmt.Errorf("EncryptStrVal error: %v", err)
 	}
+
 	cc, err := s.dbClient.EncryptStrVal(ctx, usr.CreditCard, keystore.UserDEKeyAlias)
 	if err != nil {
 		return user.User{}, fmt.Errorf("EncryptStrVal error: %v", err)
@@ -86,4 +88,55 @@ func (s *Store) saveUser(ctx context.Context, usr user.User) (user.User, error) 
 		return user.User{}, fmt.Errorf("coll.InsertOne error %v", err)
 	}
 	return usr, nil
+}
+
+// Query retrieves a list of rates from the database.
+func (s *Store) Query(ctx context.Context, filter user.QueryFilter, pageNumber int, rowsPerPage int) ([]user.User, error) {
+	// filtering
+	dbFilter := s.ApplyFilter(filter)
+
+	s.log.Info(ctx, "Check filter", "dbFilter", dbFilter)
+
+	// pagination
+	skip := (pageNumber - 1) * rowsPerPage
+	s.log.Info(ctx, "skip", "val", skip)
+	s.log.Info(ctx, "limit", "val", rowsPerPage)
+
+	var collection *mongo.Collection = documentStore.OpenCollection(s.dbClient.Client.Database(s.dbName), s.userColl)
+
+	//sorting
+	sortknob := bson.D{
+		{
+			"department", 1,
+		},
+		{
+			"email", 1,
+		},
+		//{
+		//	"user_id", 1,
+		//},
+		//{
+		//	"start_date", 1,
+		//},
+	}
+
+	// Set query opts
+	opts := options.Find().SetSort(sortknob).SetSkip(int64(skip)).SetLimit(int64(rowsPerPage)) //pageNumber *
+
+	// execute query
+	cursor, err := collection.Find(ctx, dbFilter, opts)
+	if err != nil {
+		s.log.Error(ctx, "error in collection.Find", "msg", err.Error())
+		return []user.User{}, err
+	}
+
+	// deserialize from binary json
+	var results []dbUser
+	if err = cursor.All(context.Background(), &results); err != nil {
+		s.log.Error(ctx, "error in cursor.All", "msg", err.Error())
+		return []user.User{}, err
+	}
+	s.log.Info(ctx, "Check dbResults", "len", len(results))
+
+	return toCoreUserSlice(ctx, s.dbClient, results)
 }

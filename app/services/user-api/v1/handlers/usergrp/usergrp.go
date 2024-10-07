@@ -3,6 +3,7 @@ package usergrp
 import (
 	"context"
 	"fmt"
+	"github.com/Zanda256/commitsmart-task/business/web/v1/response"
 	"net/http"
 	"net/mail"
 
@@ -58,4 +59,21 @@ func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Re
 		"Created":              usr,
 	}
 	return web.Respond(ctx, w, ret, http.StatusCreated)
+}
+
+func (h *Handlers) Query(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	fmt.Printf("\nQuery handler : ctx : %#v\n", ctx)
+	fmt.Printf("\nQuery handler : r.Context() : %#v\n", r.Context())
+	filter, err := parseFilter(ctx, r)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("\nQuery handler : filter : %#v\n", filter)
+
+	users, err := h.user.Query(ctx, filter)
+	if err != nil {
+		return response.NewError(err, http.StatusBadRequest)
+	}
+
+	return web.Respond(ctx, w, response.NewPageDocument(toAppUsers(users), len(users), 1, 10), http.StatusOK)
 }

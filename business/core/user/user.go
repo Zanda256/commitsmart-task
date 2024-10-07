@@ -13,6 +13,7 @@ import (
 // retrieve data.
 type Storer interface {
 	Create(ctx context.Context, usr User) error
+	Query(ctx context.Context, filter QueryFilter, pageNumber int, rowsPerPage int) ([]User, error)
 }
 
 // =============================================================================
@@ -50,4 +51,8 @@ func (uc *Core) Create(ctx context.Context, nu NewUser) (User, error) {
 	}
 
 	return usr, nil
+}
+
+func (c *Core) Query(ctx context.Context, filter QueryFilter) ([]User, error) {
+	return c.storer.Query(ctx, filter, 1, 10)
 }

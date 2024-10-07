@@ -25,4 +25,5 @@ func Routes(app *web.App, cfg Config) {
 	db := userdb.NewStore(cfg.Log, cfg.UserDbName, cfg.Store, cfg.UserCollName)
 	hdl := New(user.NewCore(cfg.Log, db))
 	app.HandlePath(http.MethodPost, version, "/users", hdl.Create)
+	app.HandlePath(http.MethodGet, version, "/users/:user_id", hdl.Query)
 }

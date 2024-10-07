@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Zanda256/commitsmart-task/foundation/keystore"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/Zanda256/commitsmart-task/foundation/keystore"
 )
 
 const (

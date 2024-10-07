@@ -2,19 +2,20 @@ package userdb
 
 import (
 	"context"
+	"github.com/google/uuid"
 	"net/mail"
 	"time"
 
 	"github.com/Zanda256/commitsmart-task/business/core/user"
 	documentStore "github.com/Zanda256/commitsmart-task/business/data/docStore"
 	"github.com/Zanda256/commitsmart-task/foundation/keystore"
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// dbUser represent the structure we need for moving data
 // between the app and the database.
 type dbUser struct {
-	ID          uuid.UUID        `json:"user_id"  bson:"user_id"`
+	UserID      string           `json:"user_id"  bson:"user_id"`
 	Name        string           `json:"name"  bson:"name"`
 	Email       primitive.Binary `json:"email"  bson:"email"`
 	Department  string           `json:"department" bson:"department"`
@@ -33,7 +34,7 @@ func ToDbUser(ctx context.Context, c *documentStore.DocStorage, usr user.User) (
 		return dbUser{}, err
 	}
 	dbUsr := dbUser{
-		ID:          usr.ID,
+		UserID:      usr.ID.String(),
 		Name:        usr.Name,
 		Email:       em,
 		Department:  usr.Department,
@@ -44,12 +45,17 @@ func ToDbUser(ctx context.Context, c *documentStore.DocStorage, usr user.User) (
 	return dbUsr, nil
 }
 
-func toCoreUser(dbUsr dbUser) (user.User, error) {
+func toCoreUser(ctx context.Context, c *documentStore.DocStorage, dbUsr dbUser) (user.User, error) {
 	addr := mail.Address{
 		Address: string(dbUsr.Email.Data),
 	}
+	id, err := uuid.Parse(dbUsr.UserID)
+	if err != nil {
+		return user.User{}, err
+	}
+
 	usr := user.User{
-		ID:          dbUsr.ID,
+		ID:          id,
 		Name:        dbUsr.Name,
 		Email:       addr,
 		Department:  dbUsr.Department,
@@ -58,4 +64,16 @@ func toCoreUser(dbUsr dbUser) (user.User, error) {
 		DateUpdated: dbUsr.DateUpdated.In(time.Local),
 	}
 	return usr, nil
+}
+
+func toCoreUserSlice(ctx context.Context, c *documentStore.DocStorage, dbUsers []dbUser) ([]user.User, error) {
+	usrs := make([]user.User, len(dbUsers))
+	for i, dbUsr := range dbUsers {
+		var err error
+		usrs[i], err = toCoreUser(ctx, c, dbUsr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return usrs, nil
 }

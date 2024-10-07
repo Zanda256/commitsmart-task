@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"syscall"
@@ -54,6 +55,8 @@ func (a *App) handle(method string, group string, path string, handler Handler) 
 			Now:     time.Now().UTC(),
 		}
 		ctx := SetValues(r.Context(), &v)
+		ctx = AttachPathParams(ctx, &p)
+		fmt.Printf("\nhandle : ctx : %#v\n", ctx)
 
 		if err := handler(ctx, w, r); err != nil {
 			if validateShutdown(err) {

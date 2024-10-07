@@ -21,13 +21,13 @@ run:
 #build:
 #    cd app/services/user-api/ && go build -tags cse -ldflags "-X main.build=test-run"
 
-rebuild-compose-project:
+# rebuild-compose-project:
 
 tidy:
 	go mod tidy
 
 curl-create:
-	curl -il -X POST -H 'Content-Type: application/json' -d '{"name":"bill","email":"b@gmail.com","department":"IT","credit_card":"72635 37734 90273"}' http://localhost:3000/v1/users
+	curl -il -X POST -H 'Content-Type: application/json' -d '{"name":"sekiranda","email":"seky@gmail.com","department":"IT","credit_card":"67725 37734 90273"}' http://localhost:3000/v1/users
 
 service-compose:
 	docker compose -p commitsmart-project -f ./zarf/docker/docker-compose.yml up -d
@@ -50,3 +50,6 @@ rebuild-service-container:
 		--build-arg BUILD_REF=$(VERSION) \
 		--build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
 		.
+
+logs:
+	docker logs -f commitsmart-user-api
