@@ -79,7 +79,7 @@ func (store *DocStorage) GetDataKeyID(ctx context.Context, alias string) (primit
 	return keyID, nil
 }
 
-func (store *DocStorage) EncryptStrVal(ctx context.Context, v string, dataKeyAltName string) (primitive.Binary, error) {
+func (store *DocStorage) EncryptVal(ctx context.Context, v string, dataKeyAltName string) (primitive.Binary, error) {
 	// Create a bson.RawValue to encrypt and encrypt it using the key that was
 	// just created.
 	rawValueType, rawValueData, err := bson.MarshalValue(v)

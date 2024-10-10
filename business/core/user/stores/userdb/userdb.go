@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Zanda256/commitsmart-task/foundation/keystore"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -53,41 +52,43 @@ func NewStore(log *logger.Logger, dbName string, dbClient *documentStore.DocStor
 
 // Create inserts a new user into the database.
 func (s *Store) Create(ctx context.Context, usr user.User) error {
-	_, err := s.saveUser(ctx, usr)
+	now := time.Now()
+	usr.DateCreated = now
+	usr.DateCreated = now
+
+	dbUsr, err := ToDbUser(ctx, s.dbClient, usr)
 	if err != nil {
+		s.log.Error(ctx, "error  ToDbUser", "message", err)
+		return fmt.Errorf("s.ToDbUser: %v", err)
+	}
+	_, err = s.saveUser(ctx, dbUsr)
+	if err != nil {
+		s.log.Error(ctx, "error saveUser", "message", err)
 		return fmt.Errorf("s.saveUser: %v", err)
 	}
 	return nil
 }
 
 // Create inserts a new user into the database.
-func (s *Store) saveUser(ctx context.Context, usr user.User) (user.User, error) {
-	email, err := s.dbClient.EncryptStrVal(ctx, usr.Email.String(), keystore.UserDEKeyAlias)
-	if err != nil {
-		return user.User{}, fmt.Errorf("EncryptStrVal error: %v", err)
+func (s *Store) saveUser(ctx context.Context, usr DbUser) (user.User, error) {
+
+	var doc bson.D = bson.D{
+		{"user_id", usr.UserID},
+		{"name", usr.Name},
+		{"email", usr.Email},
+		{"department", usr.Department},
+		{"credit_card", usr.CreditCard},
+		{"date_created", usr.DateCreated},
+		{"date_updated", usr.DateCreated},
 	}
 
-	cc, err := s.dbClient.EncryptStrVal(ctx, usr.CreditCard, keystore.UserDEKeyAlias)
-	if err != nil {
-		return user.User{}, fmt.Errorf("EncryptStrVal error: %v", err)
-	}
-	now := time.Now()
-	var doc bson.D = bson.D{
-		{"user_id", usr.ID},
-		{"name", usr.Name},
-		{"email", email},
-		{"department", usr.Department},
-		{"credit_card", cc},
-		{"date_created", now},
-		{"date_updated", now},
-	}
 	// Insert the document
 	coll := documentStore.OpenCollection(s.dbClient.Client.Database(s.dbName), s.userColl)
-	_, err = coll.InsertOne(ctx, doc)
+	_, err := coll.InsertOne(ctx, doc)
 	if err != nil {
 		return user.User{}, fmt.Errorf("coll.InsertOne error %v", err)
 	}
-	return usr, nil
+	return toCoreUser(ctx, s.dbClient, usr)
 }
 
 // Query retrieves a list of rates from the database.
@@ -131,7 +132,7 @@ func (s *Store) Query(ctx context.Context, filter user.QueryFilter, pageNumber i
 	}
 
 	// deserialize from binary json
-	var results []dbUser
+	var results []DbUser
 	if err = cursor.All(context.Background(), &results); err != nil {
 		s.log.Error(ctx, "error in cursor.All", "msg", err.Error())
 		return []user.User{}, err

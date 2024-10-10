@@ -27,7 +27,7 @@ func (s *Store) ApplyFilter(filter user.QueryFilter) bson.D {
 	}
 
 	if filter.Email != nil {
-		em, err := s.dbClient.EncryptStrVal(context.Background(), filter.Email.String(), keystore.UserDEKeyAlias)
+		em, err := s.dbClient.EncryptVal(context.Background(), filter.Email.String(), keystore.UserDEKeyAlias)
 		if err != nil {
 			return bson.D{}
 		}
@@ -42,10 +42,21 @@ func (s *Store) ApplyFilter(filter user.QueryFilter) bson.D {
 		departmentQ = *filter.Department
 	}
 
-	return bson.D{
-		{"user_id", bson.D{{"$eq", userIDQ}}},
-		{"email", bson.D{{"$eq", emailQ}}},
-		{"name", bson.D{{"$eq", nameQ}}},
-		{"department", bson.D{{"$eq", departmentQ}}},
+	//return bson.D{
+	//	{"user_id", bson.D{{"$eq", userIDQ}}},
+	//	{"email", bson.D{{"$eq", emailQ}}},
+	//	{"name", bson.D{{"$eq", nameQ}}},
+	//	{"department", bson.D{{"$eq", departmentQ}}},
+	//}
+	t := 1
+	if t > 0 {
+		return bson.D{}
+	} else {
+		return bson.D{
+			{"user_id", userIDQ},
+			{"email", emailQ},
+			{"name", nameQ},
+			{"department", departmentQ},
+		}
 	}
 }

@@ -3,17 +3,91 @@ package documentStore
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
-	"github.com/Zanda256/commitsmart-task/foundation/keystore"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsoncodec"
+	"go.mongodb.org/mongo-driver/bson/bsonrw"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/Zanda256/commitsmart-task/foundation/keystore"
 )
 
 type DocStorage struct {
 	Client     *mongo.Client
 	EncryptMgr *mongo.ClientEncryption
+}
+
+var mongoRegistry *bsoncodec.Registry
+
+// Update the default BSON registry to be able to handle UUID types as strings.
+func init() {
+	var (
+		// id       uuid.UUID
+		// uuidType = reflect.TypeOf(id)
+		uuidType = reflect.TypeOf(uuid.UUID{})
+	// uuidSubtype = byte(0x04)
+	)
+
+	uuidEncodeValue := func(ec bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val reflect.Value) error {
+		if !val.IsValid() || val.Type() != uuidType || val.Len() != 16 {
+			return bsoncodec.ValueEncoderError{
+				Name:     "uuid.UUID",
+				Types:    []reflect.Type{uuidType},
+				Received: val,
+			}
+		}
+		b := make([]byte, 16)
+		v := reflect.ValueOf(b)
+		reflect.Copy(v, val)
+		id, err := uuid.FromBytes(v.Bytes())
+		if err != nil {
+			return fmt.Errorf("could not parse UUID bytes (%x): %w", v.Bytes(), err)
+		}
+
+		//	return vw.WriteBinaryWithSubtype(id.MarshalText(), bson.TypeBinaryUUID)
+		return vw.WriteString(id.String())
+	}
+
+	uuidDecodeValue := func(dc bsoncodec.DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
+		if !val.IsValid() || !val.CanSet() || val.Kind() != reflect.Array {
+			return bsoncodec.ValueDecoderError{
+				Name:     "uuid.UUID",
+				Kinds:    []reflect.Kind{reflect.Bool},
+				Received: val,
+			}
+		}
+
+		var s string
+		switch vr.Type() {
+		case bson.TypeString:
+			var err error
+			if s, err = vr.ReadString(); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("received invalid BSON type to decode into UUID: %s", vr.Type())
+		}
+
+		id, err := uuid.Parse(s)
+		if err != nil {
+			return fmt.Errorf("could not parse UUID string: %s", s)
+		}
+		v := reflect.ValueOf(id)
+		if !v.IsValid() || v.Kind() != reflect.Array {
+			return fmt.Errorf("invalid kind of reflected UUID value: %s", v.Kind().String())
+		}
+		reflect.Copy(val, v)
+
+		return nil
+	}
+
+	mongoRegistry = bson.NewRegistry()
+	mongoRegistry.RegisterTypeEncoder(uuidType, bsoncodec.ValueEncoderFunc(uuidEncodeValue))
+	mongoRegistry.RegisterTypeDecoder(uuidType, bsoncodec.ValueDecoderFunc(uuidDecodeValue))
 }
 
 func StartDB(opts *options.ClientOptions) (*mongo.Client, error) {
@@ -84,8 +158,9 @@ func StartEncryptedDB(opts *options.ClientOptions) (*DocStorage, error) {
 		SetKmsProviders(kmsProviders).
 		SetKeyVaultNamespace(keyVaultNamespace).
 		SetBypassAutoEncryption(true)
+
 	// Create a new client and connect to the server
-	client, err := mongo.Connect(ctx, opts.SetAutoEncryptionOptions(autoEncryptionOpts))
+	client, err := mongo.Connect(ctx, opts.SetRegistry(mongoRegistry).SetAutoEncryptionOptions(autoEncryptionOpts))
 
 	if err != nil {
 		return nil, err
