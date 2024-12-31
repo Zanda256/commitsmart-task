@@ -106,6 +106,7 @@ func toCoreUser(ctx context.Context, c *documentStore.DocStorage, dbUsr DbUser) 
 	case []byte:
 		emailStr = string(dbUsr.CreditCard.([]byte))
 	}
+
 	usr := user.User{
 		ID:          dbUsr.UserID,
 		Name:        dbUsr.Name,
