@@ -21,14 +21,13 @@ type DocStorage struct {
 	EncryptMgr *mongo.ClientEncryption
 }
 
-var mongoRegistry *bsoncodec.Registry
-
 // Update the default BSON registry to be able to handle UUID types as strings.
-func init() {
+func UUIDTypeRegistry() *bsoncodec.Registry {
 	var (
 		// id       uuid.UUID
 		// uuidType = reflect.TypeOf(id)
-		uuidType = reflect.TypeOf(uuid.UUID{})
+		uuidType      = reflect.TypeOf(uuid.UUID{})
+		mongoRegistry *bsoncodec.Registry
 	// uuidSubtype = byte(0x04)
 	)
 
@@ -88,6 +87,8 @@ func init() {
 	mongoRegistry = bson.NewRegistry()
 	mongoRegistry.RegisterTypeEncoder(uuidType, bsoncodec.ValueEncoderFunc(uuidEncodeValue))
 	mongoRegistry.RegisterTypeDecoder(uuidType, bsoncodec.ValueDecoderFunc(uuidDecodeValue))
+
+	return mongoRegistry
 }
 
 func StartDB(opts *options.ClientOptions) (*mongo.Client, error) {
@@ -160,7 +161,7 @@ func StartEncryptedDB(opts *options.ClientOptions) (*DocStorage, error) {
 		SetBypassAutoEncryption(true)
 
 	// Create a new client and connect to the server
-	client, err := mongo.Connect(ctx, opts.SetRegistry(mongoRegistry).SetAutoEncryptionOptions(autoEncryptionOpts))
+	client, err := mongo.Connect(ctx, opts.SetAutoEncryptionOptions(autoEncryptionOpts))
 
 	if err != nil {
 		return nil, err

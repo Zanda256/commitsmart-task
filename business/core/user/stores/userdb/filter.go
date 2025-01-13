@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -14,16 +13,17 @@ import (
 
 func (s *Store) ApplyFilter(filter user.QueryFilter) bson.D {
 
-	fmt.Printf("\ndb.ApplyFilter : filter : %#v\n", filter)
+	//	fmt.Printf("\ndb.ApplyFilter : filter : %#v\n", filter)
+	fmt.Printf("\ndb.ApplyFilter : %#v\nfilter.UserID : %+v\n", filter, *filter.UserID)
 	var (
-		userIDQ     uuid.UUID
+		userIDQ     string
 		nameQ       string
 		emailQ      primitive.Binary
 		departmentQ string
 	)
 
 	if filter.UserID != nil {
-		userIDQ = *filter.UserID
+		userIDQ = filter.UserID.String()
 	}
 
 	if filter.Email != nil {
@@ -48,15 +48,10 @@ func (s *Store) ApplyFilter(filter user.QueryFilter) bson.D {
 	//	{"name", bson.D{{"$eq", nameQ}}},
 	//	{"department", bson.D{{"$eq", departmentQ}}},
 	//}
-	t := 1
-	if t > 0 {
-		return bson.D{}
-	} else {
-		return bson.D{
-			{"user_id", userIDQ},
-			{"email", emailQ},
-			{"name", nameQ},
-			{"department", departmentQ},
-		}
+	return bson.D{
+		{"user_id", userIDQ},
+		{"email", emailQ},
+		{"name", nameQ},
+		{"department", departmentQ},
 	}
 }

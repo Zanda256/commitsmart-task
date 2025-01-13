@@ -2,12 +2,15 @@ package usergrp
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/Zanda256/commitsmart-task/business/web/v1/response"
 	"net/http"
 	"net/mail"
 
+	"github.com/Zanda256/commitsmart-task/business/web/v1/response"
+
 	"github.com/Zanda256/commitsmart-task/business/core/user"
+	"github.com/Zanda256/commitsmart-task/foundation/validate"
 	"github.com/Zanda256/commitsmart-task/foundation/web"
 )
 
@@ -15,14 +18,6 @@ import (
 type Handlers struct {
 	user *user.Core
 }
-
-// New constructs a handlers for route access.
-//func New(user *user.Core, auth *auth.Auth) *Handlers {
-//	return &Handlers{
-//		user: user,
-//		auth: auth,
-//	}
-//}
 
 func New(user *user.Core) *Handlers {
 	return &Handlers{
@@ -56,7 +51,7 @@ func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Re
 	}
 	ret := map[string]any{
 		"User Create endpoint": "success",
-		"Created":              usr,
+		"Created":              toAppUser(usr),
 	}
 	return web.Respond(ctx, w, ret, http.StatusCreated)
 }
@@ -76,4 +71,22 @@ func (h *Handlers) Query(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	return web.Respond(ctx, w, response.NewPageDocument(toAppUsers(users), len(users), 1, 10), http.StatusOK)
+}
+
+func (h *Handlers) QueryByID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	filter, err := parseFilter(ctx, r)
+	if err != nil {
+		return err
+	}
+
+	if filter.UserID == nil {
+		return response.NewError(validate.NewFieldsError("user_id", errors.New("user_id field is required")), http.StatusBadRequest)
+	}
+
+	usr, err := h.user.QueryByID(ctx, filter)
+	if err != nil {
+		return response.NewError(err, http.StatusBadRequest)
+	}
+
+	return web.Respond(ctx, w, response.NewPageDocument(toAppUsers([]user.User{usr}), 1, 1, 10), http.StatusOK)
 }

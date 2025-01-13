@@ -6,18 +6,17 @@ import (
 	"net/mail"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/Zanda256/commitsmart-task/business/core/user"
 	documentStore "github.com/Zanda256/commitsmart-task/business/data/docStore"
 	"github.com/Zanda256/commitsmart-task/foundation/keystore"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // DbUser represent the structure we need for moving data
 // between the app and the database.
 type DbUser struct {
-	UserID      uuid.UUID   `json:"user_id"  bson:"user_id"`
+	UserID      string      `json:"user_id"  bson:"user_id"`
 	Name        string      `json:"name"  bson:"name"`
 	Email       interface{} `json:"email"  bson:"email"`
 	Department  string      `json:"department" bson:"department"`
@@ -41,7 +40,7 @@ func ToDbUser(ctx context.Context, c *documentStore.DocStorage, usr user.User) (
 	// }
 	//	usrID, err := bson.Marshal(byte)
 	dbUsr := DbUser{
-		UserID:      usr.ID,
+		UserID:      usr.ID.String(),
 		Name:        usr.Name,
 		Email:       em,
 		Department:  usr.Department,
@@ -52,7 +51,7 @@ func ToDbUser(ctx context.Context, c *documentStore.DocStorage, usr user.User) (
 	return dbUsr, nil
 }
 
-func toCoreUser(ctx context.Context, c *documentStore.DocStorage, dbUsr DbUser) (user.User, error) {
+func toCoreUser(ctx context.Context, dbUsr DbUser) (user.User, error) {
 	//em := dbUsr.Email.(primitive.Binary).Data
 	emailStr := ""
 
@@ -93,12 +92,10 @@ func toCoreUser(ctx context.Context, c *documentStore.DocStorage, dbUsr DbUser) 
 	// 	return user.User{}, err
 	// }
 
-	cc := ""
-
 	switch dbUsr.CreditCard.(type) {
 	case primitive.Binary:
 		c := dbUsr.CreditCard.(primitive.Binary)
-		cc = string(c.Data)
+		emailStr = string(c.Data)
 
 	case string:
 		emailStr = dbUsr.CreditCard.(string)
@@ -107,23 +104,28 @@ func toCoreUser(ctx context.Context, c *documentStore.DocStorage, dbUsr DbUser) 
 		emailStr = string(dbUsr.CreditCard.([]byte))
 	}
 
+	id, err := uuid.Parse(dbUsr.UserID)
+	if err != nil {
+		return user.User{}, err
+	}
+
 	usr := user.User{
-		ID:          dbUsr.UserID,
+		ID:          id,
 		Name:        dbUsr.Name,
 		Email:       addr,
 		Department:  dbUsr.Department,
-		CreditCard:  cc,
+		CreditCard:  emailStr,
 		DateCreated: dbUsr.DateCreated.In(time.Local),
 		DateUpdated: dbUsr.DateUpdated.In(time.Local),
 	}
 	return usr, nil
 }
 
-func toCoreUserSlice(ctx context.Context, c *documentStore.DocStorage, dbUsers []DbUser) ([]user.User, error) {
+func toCoreUserSlice(ctx context.Context, dbUsers []DbUser) ([]user.User, error) {
 	usrs := make([]user.User, len(dbUsers))
 	for i, dbUsr := range dbUsers {
 		var err error
-		usrs[i], err = toCoreUser(ctx, c, dbUsr)
+		usrs[i], err = toCoreUser(ctx, dbUsr)
 		if err != nil {
 			return nil, fmt.Errorf("toCoreUser error: %w", err)
 		}

@@ -3,8 +3,9 @@ package user
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/Zanda256/commitsmart-task/foundation/logger"
 )
@@ -14,6 +15,7 @@ import (
 type Storer interface {
 	Create(ctx context.Context, usr User) error
 	Query(ctx context.Context, filter QueryFilter, pageNumber int, rowsPerPage int) ([]User, error)
+	QueryByID(ctx context.Context, filter QueryFilter) (User, error)
 }
 
 // =============================================================================
@@ -55,4 +57,8 @@ func (uc *Core) Create(ctx context.Context, nu NewUser) (User, error) {
 
 func (c *Core) Query(ctx context.Context, filter QueryFilter) ([]User, error) {
 	return c.storer.Query(ctx, filter, 1, 10)
+}
+
+func (c *Core) QueryByID(ctx context.Context, filter QueryFilter) (User, error) {
+	return c.storer.QueryByID(ctx, filter)
 }

@@ -2,6 +2,7 @@ package userdb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -31,24 +32,6 @@ func NewStore(log *logger.Logger, dbName string, dbClient *documentStore.DocStor
 		dbName:   dbName,
 	}
 }
-
-// func (s *Store) encryptStrValue(val, dataKeyId string) error {
-// 	nameRawValueType, nameRawValueData, err := bson.MarshalValue(val)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	nameRawValue := bson.RawValue{Type: nameRawValueType, Value: nameRawValueData}
-// 	nameEncryptionOpts := options.Encrypt().
-// 		SetAlgorithm("AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic").
-// 		SetKeyID(dataKeyId)
-// 	nameEncryptedField, err := s.encryptMgr.Encrypt(
-// 		context.TODO(),
-// 		nameRawValue,
-// 		nameEncryptionOpts)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// }
 
 // Create inserts a new user into the database.
 func (s *Store) Create(ctx context.Context, usr user.User) error {
@@ -88,7 +71,39 @@ func (s *Store) saveUser(ctx context.Context, usr DbUser) (user.User, error) {
 	if err != nil {
 		return user.User{}, fmt.Errorf("coll.InsertOne error %v", err)
 	}
-	return toCoreUser(ctx, s.dbClient, usr)
+	return toCoreUser(ctx, usr)
+}
+
+// QueryByID retrieves a list of rates from the database.
+func (s *Store) QueryByID(ctx context.Context, filter user.QueryFilter) (user.User, error) {
+	//dbFilter := s.ApplyFilter(filter)
+
+	var userIDQ string
+	if filter.UserID != nil {
+		userIDQ = filter.UserID.String()
+	}
+	dbFilter := bson.D{
+		{"user_id", userIDQ},
+	}
+
+	s.log.Info(ctx, "Check filter", "dbFilter", dbFilter)
+
+	var collection *mongo.Collection = documentStore.OpenCollection(s.dbClient.Client.Database(s.dbName), s.userColl)
+
+	// execute query
+	result := DbUser{}
+	err := collection.FindOne(ctx, dbFilter).Decode(&result)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return user.User{}, nil
+		}
+		s.log.Error(ctx, "error in collection.Find", "msg", err.Error())
+		return user.User{}, err
+	}
+
+	s.log.Info(ctx, "Check dbResults", "values", result)
+
+	return toCoreUser(ctx, result)
 }
 
 // Query retrieves a list of rates from the database.
@@ -113,12 +128,6 @@ func (s *Store) Query(ctx context.Context, filter user.QueryFilter, pageNumber i
 		{
 			"email", 1,
 		},
-		//{
-		//	"user_id", 1,
-		//},
-		//{
-		//	"start_date", 1,
-		//},
 	}
 
 	// Set query opts
@@ -138,6 +147,7 @@ func (s *Store) Query(ctx context.Context, filter user.QueryFilter, pageNumber i
 		return []user.User{}, err
 	}
 	s.log.Info(ctx, "Check dbResults", "len", len(results))
+	s.log.Info(ctx, "Check dbResults", "values", results)
 
-	return toCoreUserSlice(ctx, s.dbClient, results)
+	return toCoreUserSlice(ctx, results)
 }

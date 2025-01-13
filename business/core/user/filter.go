@@ -2,15 +2,16 @@ package user
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"net/mail"
+
+	"github.com/google/uuid"
 
 	"github.com/Zanda256/commitsmart-task/foundation/validate"
 )
 
 // QueryFilter holds the available fields a query can be filtered on.
 type QueryFilter struct {
-	UserID     *uuid.UUID    `validate:"required"`
+	UserID     *uuid.UUID    `validate:"omitempty"`
 	Name       *string       `validate:"omitempty"`
 	Email      *mail.Address `validate:"omitempty"`
 	Department *string       `validate:"omitempty"`

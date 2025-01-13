@@ -63,8 +63,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 			IdleTimeout     time.Duration
 			ShutdownTimeout time.Duration
 			APIHost         string
-			//APIPort   string
-			//DebugHost string
+			// APIPort   string
+			// DebugHost string
 		}
 
 		MongoDb struct {
@@ -103,10 +103,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	mongoUrl := mongoScheme + cfg.MongoDb.UsersMongoUser + ":" + cfg.MongoDb.UsersMongoPassword + "@" + cfg.MongoDb.Url
 
+	mongoRegistry := documentStore.UUIDTypeRegistry()
+
 	clientOpts := options.Client().
 		ApplyURI(mongoUrl).
 		SetBSONOptions(bsonOpts).
-		SetTimeout(5 * time.Second)
+		SetTimeout(5 * time.Second).
+		SetRegistry(mongoRegistry)
 	store, err := documentStore.StartEncryptedDB(clientOpts)
 	if err != nil {
 		return fmt.Errorf("mongodb connection failed: %q", err.Error())

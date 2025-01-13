@@ -1,8 +1,4 @@
 # Check to see if we can use ash, in Alpine images, or default to BASH.
-#docker compose rm -v -f ./zarf/docker/docker-compose.yml
-#curl -il -X POST http://localhost:3000/v1/users
-	# curl -il -X POST -H 'Content-Type: application/json' -d '{"name":"bill","email":"b@gmail.com","roles":["ADMIN"],"department":"IT","password":"123","passwordConfirm":"123"}' http://localhost:3000/v1/users
-#rebuild-compose-project: rebuild-service-container service-compose
 
 SHELL_PATH = /bin/ash
 SHELL = $(if $(wildcard $(SHELL_PATH)),/bin/ash,/bin/bash)
@@ -22,12 +18,20 @@ run:
 #    cd app/services/user-api/ && go build -tags cse -ldflags "-X main.build=test-run"
 
 # rebuild-compose-project:
+#
+#docker compose rm -v -f ./zarf/docker/docker-compose.yml
+#curl -il -X POST http://localhost:3000/v1/users
+	# curl -il -X POST -H 'Content-Type: application/json' -d '{"name":"bill","email":"b@gmail.com","roles":["ADMIN"],"department":"IT","password":"123","passwordConfirm":"123"}' http://localhost:3000/v1/users
+#rebuild-compose-project: rebuild-service-container service-compose
 
 tidy:
 	go mod tidy
 
 curl-create:
-	curl -il -X POST -H 'Content-Type: application/json' -d '{"name":"sekiranda","email":"seky@gmail.com","department":"IT","credit_card":"67725 37734 90273"}' http://localhost:3000/v1/users
+	curl -i -X POST -H 'Content-Type: application/json' -d '{"name":"sekiranda","email":"seky@gmail.com","department":"IT","credit_card":"67725 37734 90273"}' http://localhost:3000/v1/users
+
+curl-get-user:
+	curl -i -X GET  http://localhost:3000/v1/users/ce937189-159d-4e5d-b307-00307eebe7d6
 
 service-compose:
 	docker compose -p commitsmart-project -f ./zarf/docker/docker-compose.yml up -d

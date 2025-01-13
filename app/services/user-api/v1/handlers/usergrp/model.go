@@ -1,8 +1,9 @@
 package usergrp
 
 import (
-	"github.com/Zanda256/commitsmart-task/business/core/user"
 	"time"
+
+	"github.com/Zanda256/commitsmart-task/business/core/user"
 )
 
 // AppNewUser contains information needed to create a new user.
@@ -29,6 +30,7 @@ func toAppUser(usr user.User) AppUser {
 	return AppUser{
 		ID:          usr.ID.String(),
 		Name:        usr.Name,
+		CreditCard:  usr.CreditCard,
 		Email:       usr.Email.Address,
 		Department:  usr.Department,
 		DateCreated: usr.DateCreated.Format(time.RFC3339),
