@@ -16,7 +16,7 @@ import (
 // DbUser represent the structure we need for moving data
 // between the app and the database.
 type DbUser struct {
-	UserID      string      `json:"user_id"  bson:"user_id"`
+	UserID      uuid.UUID   `json:"user_id"  bson:"user_id"`
 	Name        string      `json:"name"  bson:"name"`
 	Email       interface{} `json:"email"  bson:"email"`
 	Department  string      `json:"department" bson:"department"`
@@ -40,7 +40,7 @@ func ToDbUser(ctx context.Context, c *documentStore.DocStorage, usr user.User) (
 	// }
 	//	usrID, err := bson.Marshal(byte)
 	dbUsr := DbUser{
-		UserID:      usr.ID.String(),
+		UserID:      usr.ID,
 		Name:        usr.Name,
 		Email:       em,
 		Department:  usr.Department,
@@ -104,13 +104,8 @@ func toCoreUser(ctx context.Context, dbUsr DbUser) (user.User, error) {
 		emailStr = string(dbUsr.CreditCard.([]byte))
 	}
 
-	id, err := uuid.Parse(dbUsr.UserID)
-	if err != nil {
-		return user.User{}, err
-	}
-
 	usr := user.User{
-		ID:          id,
+		ID:          dbUsr.UserID,
 		Name:        dbUsr.Name,
 		Email:       addr,
 		Department:  dbUsr.Department,
