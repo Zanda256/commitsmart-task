@@ -24,11 +24,8 @@ type DocStorage struct {
 // Update the default BSON registry to be able to handle UUID types as strings.
 func UUIDTypeRegistry() *bsoncodec.Registry {
 	var (
-		// id       uuid.UUID
-		// uuidType = reflect.TypeOf(id)
 		uuidType      = reflect.TypeOf(uuid.UUID{})
 		mongoRegistry *bsoncodec.Registry
-	// uuidSubtype = byte(0x04)
 	)
 
 	uuidEncodeValue := func(ec bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val reflect.Value) error {
@@ -47,7 +44,6 @@ func UUIDTypeRegistry() *bsoncodec.Registry {
 			return fmt.Errorf("could not parse UUID bytes (%x): %w", v.Bytes(), err)
 		}
 
-		//	return vw.WriteBinaryWithSubtype(id.MarshalText(), bson.TypeBinaryUUID)
 		return vw.WriteString(id.String())
 	}
 
@@ -209,14 +205,3 @@ func StartEncryptedDB(opts *options.ClientOptions) (*DocStorage, error) {
 
 	return strg, nil
 }
-
-// func localMasterKey() []byte {
-// 	key := make([]byte, 96)
-// 	if _, err := rand.Read(key); err != nil {
-// 		logger.Fatalf("Unable to create a random 96 byte data key: %v", err)
-// 	}
-// 	if err := ioutil.WriteFile("master-key.txt", key, 0644); err != nil {
-// 		log.Fatalf("Unable to write key to file: %v", err)
-// 	}
-// 	return key
-// }

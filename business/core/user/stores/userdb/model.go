@@ -34,11 +34,7 @@ func ToDbUser(ctx context.Context, c *documentStore.DocStorage, usr user.User) (
 	if err != nil {
 		return DbUser{}, err
 	}
-	// byt, err := usr.ID.MarshalBinary()
-	// if err != nil {
-	// 	return DbUser{}, err
-	// }
-	//	usrID, err := bson.Marshal(byte)
+
 	dbUsr := DbUser{
 		UserID:      usr.ID,
 		Name:        usr.Name,
@@ -52,7 +48,6 @@ func ToDbUser(ctx context.Context, c *documentStore.DocStorage, usr user.User) (
 }
 
 func toCoreUser(ctx context.Context, dbUsr DbUser) (user.User, error) {
-	//em := dbUsr.Email.(primitive.Binary).Data
 	emailStr := ""
 
 	switch dbUsr.Email.(type) {
@@ -70,27 +65,6 @@ func toCoreUser(ctx context.Context, dbUsr DbUser) (user.User, error) {
 	addr := mail.Address{
 		Address: emailStr,
 	}
-	fmt.Printf("\n\nmodel.go:71 addr %+v\n\n", addr)
-
-	//	var uid []byte
-	fmt.Printf("\n\nmodel.go:73 db.UserID %+v\ntype : %T\n", dbUsr.UserID, dbUsr.UserID)
-	// err := bson.Unmarshal(dbUsr.UserID.([]byte), &uid)
-	// if err != nil {
-	// 	return user.User{}, err
-	// }
-	//k, v := bson.UnmarshalValue(bson, data []byte, val interface{})
-	// var (
-	// 	idbyts []byte
-	// 	ok     bool
-	// )
-	// if idbyts, ok = dbUsr.UserID.([]byte); ok {
-	// 	fmt.Printf("\n\nidbyts %+v\n\n", idbyts)
-	// }
-
-	// id, err := uuid.FromBytes(idbyts)
-	// if err != nil {
-	// 	return user.User{}, err
-	// }
 
 	switch dbUsr.CreditCard.(type) {
 	case primitive.Binary:

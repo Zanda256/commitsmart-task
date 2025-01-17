@@ -14,16 +14,6 @@ GO_VERSION := 1.23.1
 run:
 	go run -tags cse app/services/user-api/main.go
 
-#build:
-#    cd app/services/user-api/ && go build -tags cse -ldflags "-X main.build=test-run"
-
-# rebuild-compose-project:
-#
-#docker compose rm -v -f ./zarf/docker/docker-compose.yml
-#curl -il -X POST http://localhost:3000/v1/users
-	# curl -il -X POST -H 'Content-Type: application/json' -d '{"name":"bill","email":"b@gmail.com","roles":["ADMIN"],"department":"IT","password":"123","passwordConfirm":"123"}' http://localhost:3000/v1/users
-#rebuild-compose-project: rebuild-service-container service-compose
-
 tidy:
 	go mod tidy
 

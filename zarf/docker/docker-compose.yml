@@ -1,5 +1,3 @@
-#version: "3.8"
-
 services:
   user-api:
     image: zanda256/user-api:0.0.1

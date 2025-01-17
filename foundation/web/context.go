@@ -2,9 +2,9 @@ package web
 
 import (
 	"context"
-	"fmt"
-	"github.com/julienschmidt/httprouter"
 	"time"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 type ctxKey int
@@ -30,7 +30,6 @@ func SetValues(ctx context.Context, v *Values) context.Context {
 
 func AttachPathParams(ctx context.Context, val *httprouter.Params) context.Context {
 	ctx = context.WithValue(ctx, PathParamsKey, val)
-	fmt.Printf("\nAttachPathParams : ctx : %#v\n", ctx)
 	return ctx
 }
 

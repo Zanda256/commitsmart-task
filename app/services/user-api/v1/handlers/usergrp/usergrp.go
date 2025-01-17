@@ -57,13 +57,10 @@ func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Re
 }
 
 func (h *Handlers) Query(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	fmt.Printf("\nQuery handler : ctx : %#v\n", ctx)
-	fmt.Printf("\nQuery handler : r.Context() : %#v\n", r.Context())
 	filter, err := parseFilter(ctx, r)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("\nQuery handler : filter : %#v\n", filter)
 
 	users, err := h.user.Query(ctx, filter)
 	if err != nil {

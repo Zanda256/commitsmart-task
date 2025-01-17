@@ -76,12 +76,6 @@ func (s *Store) saveUser(ctx context.Context, usr DbUser) (user.User, error) {
 
 // QueryByID retrieves a list of rates from the database.
 func (s *Store) QueryByID(ctx context.Context, filter user.QueryFilter) (user.User, error) {
-	//dbFilter := s.ApplyFilter(filter)
-
-	// var userIDQ string
-	// if filter.UserID != nil {
-	// 	userIDQ = filter.UserID
-	// }
 	dbFilter := bson.D{
 		{"user_id", *filter.UserID},
 	}
